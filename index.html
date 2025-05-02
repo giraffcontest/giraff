@@ -6,9 +6,9 @@
         body, html {
             margin: 0;
             padding: 0;
+            width: 100%;
             height: 100%;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
+            overflow: hidden; /* Убираем прокрутку */
         }
         
         #loading-container {
@@ -48,8 +48,11 @@
         }
         
         iframe {
+            position: absolute; /* Абсолютное позиционирование */
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 100vh;
+            height: 100%;
             border: none;
             display: none;
         }
@@ -81,7 +84,7 @@
         let htmlFile;
         htmlFile = 'https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html';
 
-        // Симуляция прогресса загрузки (в реальном приложении можно использовать XMLHttpRequest для отслеживания прогресса)
+        // Симуляция прогресса загрузки
         simulateProgress();
         
         function simulateProgress() {
@@ -97,11 +100,8 @@
         }
         
         function contentLoaded() {
-            // Когда iframe загружен, скрываем индикатор загрузки и показываем iframe
             document.getElementById('loading-container').style.display = 'none';
             document.getElementById('content-frame').style.display = 'block';
-            
-            // Устанавливаем прогресс-бар на 100% перед исчезновением
             document.getElementById('progress-bar').style.width = '100%';
         }
 
@@ -110,3 +110,7 @@
     </script>
 </body>
 </html>
+
+
+
+
