@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Динамическая загрузка</title>
+    <style>
+        iframe {
+            width: 100%;
+            height: 100vh;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="content-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+
+    <script>
+        // Получаем параметры из URL
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const date = params.get('date');
+
+        // Выбираем файл на основе параметров
+        let htmlFile;
+        if (code === 'secret123') {
+            htmlFile = 'https://viliam-andropov.github.io/qxz_009_qvs/2025-05-03.html';
+        } else if (date === '2024-01-01') {
+            htmlFile = 'https://viliam-andropov.github.io/qxz_009_qvs/2025-05-04.html';
+        } else {
+            htmlFile = 'https://viliam-andropov.github.io/qxz_009_qvs/2025-05-05.html';
+        }
+
+        // Загружаем в iframe
+        document.getElementById('content-frame').src = htmlFile;
+    </script>
+</body>
+</html>
+
+
