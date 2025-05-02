@@ -1,24 +1,206 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Iframe с работающими ссылками</title>
+    <title>Конкурсы - Жираф</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        iframe {
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        }
+        
+        #loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #edeef0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        #loading-image {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+        }
+        
+        #progress-container {
+            width: 80%;
+            max-width: 400px;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
+        }
+        
+        #content-frame {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             border: none;
+            display: none;
+            background-color: #edeef0;
+            transform-origin: top left;
         }
+        
+        #loading-text {
+            margin-top: 15px;
+            color: #46588d;
+            font-size: 18px;
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        }
+
+        /* Подключение шрифтов как в загружаемом файле */
+        @import url('https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Sofia+Sans+Extra+Condensed:wght@1;200;400;800&display=swap');
     </style>
+    <!-- Те же скрипты, что и в загружаемом файле -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 </head>
 <body>
+    <div id="loading-container">
+        <img id="loading-image" src="https://cdn.pixabay.com/photo/2016/08/25/07/30/orange-1618917_640.png" alt="Loading...">
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="loading-text">Загрузка конкурсов...</div>
+    </div>
+    
     <iframe 
         id="content-frame" 
         sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation"
-        src="https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html">
-    </iframe>
+        onload="contentLoaded()"
+        scrolling="auto"
+    ></iframe>
+
+    <script>
+        // Получаем параметры из URL
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const date = params.get('date');
+
+        // Выбираем файл на основе параметров
+        const htmlFile = 'https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html';
+
+        // Симуляция прогресса загрузки
+        simulateProgress();
+        
+        function simulateProgress() {
+            let progress = 0;
+            const progressBar = document.getElementById('progress-bar');
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    clearInterval(interval);
+                }
+                progressBar.style.width = progress + '%';
+            }, 200);
+        }
+        
+        function contentLoaded() {
+            // Когда iframe загружен
+            const frame = document.getElementById('content-frame');
+            
+            // 1. Настраиваем масштабирование
+            adjustIframeScaling();
+            
+            // 2. Показываем iframe и скрываем загрузчик
+            frame.style.display = 'block';
+            document.getElementById('loading-container').style.opacity = '0';
+            
+            // 3. Полная очистка загрузчика после анимации
+            setTimeout(() => {
+                document.getElementById('loading-container').style.display = 'none';
+            }, 500);
+            
+            // 4. Регулярная проверка размеров
+            setInterval(adjustIframeScaling, 1000);
+        }
+
+        function adjustIframeScaling() {
+            const frame = document.getElementById('content-frame');
+            try {
+                const innerDoc = frame.contentDocument || frame.contentWindow.document;
+                
+                // Применяем важные стили к внутреннему документу
+                const style = document.createElement('style');
+                style.textContent = `
+                    body, html {
+                        width: 100% !important;
+                        height: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        overflow-x: hidden !important;
+                    }
+                    .page {
+                        min-width: 100% !important;
+                        max-width: 100% !important;
+                        padding: 10px !important;
+                        box-sizing: border-box !important;
+                    }
+                    .info_middle2, .info_middle-left2 {
+                        width: 100% !important;
+                        max-width: none !important;
+                    }
+                    pre {
+                        font-size: 14px !important;
+                    }
+                    body {
+                        font-size: 16px !important;
+                        zoom: 1.2;
+                    }
+                `;
+                
+                // Добавляем стили только если их еще нет
+                if (!innerDoc.head.querySelector('meta[name="iframe-styles"]')) {
+                    const meta = document.createElement('meta');
+                    meta.name = "iframe-styles";
+                    meta.content = "applied";
+                    innerDoc.head.appendChild(meta);
+                    innerDoc.head.appendChild(style);
+                }
+                
+                // Дополнительное масштабирование для мобильных
+                if (window.innerWidth < 768) {
+                    frame.style.transform = 'scale(1)';
+                } else {
+                    frame.style.transform = 'scale(1)';
+                }
+                
+            } catch (e) {
+                console.log("Ошибка доступа к iframe:", e);
+            }
+        }
+
+        // Загружаем в iframe
+        document.getElementById('content-frame').src = htmlFile;
+
+        // Реакция на изменение размера окна
+        window.addEventListener('resize', () => {
+            adjustIframeScaling();
+        });
+    </script>
 </body>
 </html>
-
