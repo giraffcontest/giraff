@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Жираф</title>
     <style>
+        /* Ваши стили остаются без изменений */
         body, html {
             margin: 0;
             padding: 0;
@@ -85,6 +86,17 @@
         .hidden {
             display: none !important;
         }
+        
+        #debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px;
+            font-size: 12px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -97,14 +109,24 @@
     
     <iframe 
         id="fullscreen-iframe"
-        src=""  <!-- Источник будет установлен через JS -->
+        src=""
         allow="fullscreen" 
         loading="eager"
         onload="iframeLoaded()"
+        onerror="iframeError()"
         class="hidden"
     ></iframe>
 
+    <div id="debug-info"></div>
+
     <script>
+        // Функция для отладки
+        function debugLog(message) {
+            const debugEl = document.getElementById('debug-info');
+            debugEl.textContent += message + '\n';
+            console.log(message);
+        }
+
         // Получаем параметр из URL
         function getUrlParameter(name) {
             name = name.replace(/[\[\]]/g, '\\$&');
@@ -115,12 +137,12 @@
             return decodeURIComponent(results[2].replace(/\+/g, ' '));
         }
         
-        // Проверяем, действительна ли ссылка
+        // Проверяем валидность ссылки
         function checkLinkValidity() {
             const timestampParam = getUrlParameter('t');
             
             if (!timestampParam) {
-                showErrorMessage('Ссылка не содержит параметра времени и недействительна');
+                showErrorMessage('Ссылка не содержит параметра времени');
                 return false;
             }
             
@@ -143,41 +165,51 @@
             return true;
         }
         
-        // Показываем сообщение об ошибке
         function showErrorMessage(message) {
             document.querySelector('.spinner').classList.add('hidden');
             document.querySelector('.loading-text').classList.add('hidden');
             const errorElement = document.getElementById('expired-message');
             errorElement.textContent = message;
             errorElement.classList.remove('hidden');
+            debugLog('Error: ' + message);
         }
         
-        // Когда iframe загружен
         function iframeLoaded() {
+            debugLog('Iframe loaded successfully');
             document.body.classList.add('iframe-loaded');
         }
         
-        // Основная логика при загрузке страницы
+        function iframeError() {
+            debugLog('Iframe loading failed');
+            showErrorMessage('Ошибка загрузки содержимого. Пожалуйста, попробуйте позже.');
+        }
+
+        // Основная инициализация
         document.addEventListener('DOMContentLoaded', function() {
+            debugLog('Page loaded');
+            debugLog('URL params: ' + window.location.search);
+            
             if (checkLinkValidity()) {
-                // Получаем имя файла из параметра 'file'
                 const fileParam = getUrlParameter('file');
-                const defaultFile = '2025-05-03.html';  // Файл по умолчанию
-                const fileToLoad = fileParam ? fileParam : defaultFile;
+                const baseUrl = 'https://viliam-andropov.github.io/qgfjdkdlid654hdk/';
+                const defaultFile = '2025-05-03.html';
+                const fileToLoad = fileParam || defaultFile;
+                const fullUrl = baseUrl + fileToLoad;
                 
-                // Устанавливаем src для iframe
+                debugLog('Loading file: ' + fullUrl);
+                
                 const iframe = document.getElementById('fullscreen-iframe');
-                iframe.src = `https://viliam-andropov.github.io/qgfjdkdlid654hdk/${fileToLoad}`;
+                iframe.src = fullUrl;
                 iframe.classList.remove('hidden');
-            } else {
-                document.querySelector('.spinner').style.display = 'none';
-                document.querySelector('.loading-text').style.display = 'none';
+                
+                // Добавляем таймаут на случай, если iframe не загрузится
+                setTimeout(function() {
+                    if (!document.body.classList.contains('iframe-loaded')) {
+                        debugLog('Iframe loading timeout');
+                        showErrorMessage('Превышено время ожидания загрузки');
+                    }
+                }, 10000); // 10 секунд таймаут
             }
-        });
-        
-        // Обработка ошибки загрузки iframe
-        document.getElementById('fullscreen-iframe').addEventListener('error', function() {
-            showErrorMessage('Ошибка загрузки файла. Пожалуйста, проверьте ссылку.');
         });
     </script>
 </body>
