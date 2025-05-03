@@ -5,27 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Жираф</title>
     <style>
-        /* Сбрасываем все отступы и margins */
         body, html {
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Убираем прокрутку */
+            overflow: hidden;
             height: 100%;
+            font-family: Arial, sans-serif;
         }
         
-        /* iframe на весь экран */
         #fullscreen-iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            border: none; /* Убираем границу */
-            opacity: 0; /* Сначала невидим */
+            border: none;
+            opacity: 0;
             transition: opacity 0.5s ease;
         }
         
-        /* Индикатор загрузки */
         #loading-container {
             position: absolute;
             top: 0;
@@ -50,9 +48,10 @@
         }
         
         .loading-text {
-            font-family: Arial, sans-serif;
             font-size: 18px;
             color: #333;
+            text-align: center;
+            margin: 10px 20px;
         }
         
         .loading-image {
@@ -66,7 +65,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Когда iframe загружен */
         .iframe-loaded #loading-container {
             display: none;
         }
@@ -74,34 +72,112 @@
         .iframe-loaded #fullscreen-iframe {
             opacity: 1;
         }
+        
+        .error-message {
+            color: #d9534f;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            max-width: 80%;
+            margin: 0 auto;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
-    <!-- Индикатор загрузки -->
     <div id="loading-container">
         <img src="https://viliam-andropov.github.io/qgfjdkdlid654hdk/giraff_logo.png" class="loading-image">
         <div class="spinner"></div>
         <div class="loading-text">Загрузка...</div>
+        <div id="expired-message" class="error-message hidden"></div>
     </div>
     
-    <!-- iframe с внешним контентом -->
     <iframe 
         id="fullscreen-iframe"
-        src="https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html"
+        src=""  <!-- Источник будет установлен через JS -->
         allow="fullscreen" 
         loading="eager"
         onload="iframeLoaded()"
+        class="hidden"
     ></iframe>
 
     <script>
+        // Получаем параметр из URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[\]]/g, '\\$&');
+            const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+            const results = regex.exec(window.location.href);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+        
+        // Проверяем, действительна ли ссылка
+        function checkLinkValidity() {
+            const timestampParam = getUrlParameter('t');
+            
+            if (!timestampParam) {
+                showErrorMessage('Ссылка не содержит параметра времени и недействительна');
+                return false;
+            }
+            
+            const linkTime = parseInt(timestampParam);
+            if (isNaN(linkTime)) {
+                showErrorMessage('Неверный формат времени в ссылке');
+                return false;
+            }
+            
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeDifference = currentTime - linkTime;
+            const tenMinutesInSeconds = 10 * 60;
+            
+            if (timeDifference > tenMinutesInSeconds) {
+                const minutesPassed = Math.floor(timeDifference / 60);
+                showErrorMessage(`Ссылка недействительна. Прошло ${minutesPassed} минут. Максимальное время - 10 минут.`);
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Показываем сообщение об ошибке
+        function showErrorMessage(message) {
+            document.querySelector('.spinner').classList.add('hidden');
+            document.querySelector('.loading-text').classList.add('hidden');
+            const errorElement = document.getElementById('expired-message');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+        
+        // Когда iframe загружен
         function iframeLoaded() {
-            // Добавляем класс к body, когда iframe загружен
             document.body.classList.add('iframe-loaded');
         }
         
-        // На случай ошибки загрузки
+        // Основная логика при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            if (checkLinkValidity()) {
+                // Получаем имя файла из параметра 'file'
+                const fileParam = getUrlParameter('file');
+                const defaultFile = '2025-05-03.html';  // Файл по умолчанию
+                const fileToLoad = fileParam ? fileParam : defaultFile;
+                
+                // Устанавливаем src для iframe
+                const iframe = document.getElementById('fullscreen-iframe');
+                iframe.src = `https://viliam-andropov.github.io/qgfjdkdlid654hdk/${fileToLoad}`;
+                iframe.classList.remove('hidden');
+            } else {
+                document.querySelector('.spinner').style.display = 'none';
+                document.querySelector('.loading-text').style.display = 'none';
+            }
+        });
+        
+        // Обработка ошибки загрузки iframe
         document.getElementById('fullscreen-iframe').addEventListener('error', function() {
-            document.querySelector('.loading-text').textContent = 'Ошибка загрузки. Пожалуйста, попробуйте позже.';
+            showErrorMessage('Ошибка загрузки файла. Пожалуйста, проверьте ссылку.');
         });
     </script>
 </body>
