@@ -3,177 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iframe с анимированным прогресс-баром</title>
+    <title>Полноэкранный iframe</title>
     <style>
-        /* Сброс стилей и полноэкранные размеры */
+        /* Сбрасываем все отступы и margins */
         body, html {
             margin: 0;
             padding: 0;
+            overflow: hidden; /* Убираем прокрутку */
             height: 100%;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
         }
-
-        /* Стили для загрузочного экрана */
-        #loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            transition: opacity 0.5s ease;
-        }
-
-        #loader.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loading-image {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 20px;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        /* Стили для прогресс-бара */
-        .progress-container {
-            width: 50%;
-            max-width: 300px;
-            height: 20px;
-            background: #f0f0f0;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(to right, #4CAF50, #8BC34A);
-            transition: width 0.3s ease;
-        }
-
-        .loading-text {
-            margin-top: 15px;
-            color: #555;
-            font-size: 1.2em;
-        }
-
-        /* Стили для полноэкранного iframe */
-        #content-iframe {
+        
+        /* iframe на весь экран */
+        #fullscreen-iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            border: none;
-            opacity: 0;
+            border: none; /* Убираем границу */
+            opacity: 0; /* Сначала невидим */
             transition: opacity 0.5s ease;
         }
-
-        #content-iframe.loaded {
+        
+        /* Индикатор загрузки */
+        #loading-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f0f0f0;
+            flex-direction: column;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .loading-text {
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Когда iframe загружен */
+        .iframe-loaded #loading-container {
+            display: none;
+        }
+        
+        .iframe-loaded #fullscreen-iframe {
             opacity: 1;
         }
     </style>
 </head>
 <body>
-    <!-- Загрузочный экран -->
-    <div id="loader">
-        <img class="loading-image" src="https://cdn.pixabay.com/photo/2016/08/25/07/30/orange-1618917_640.png" alt="Loading">
-        <div class="progress-container">
-            <div class="progress-bar" id="progress-bar"></div>
-        </div>
-        <div class="loading-text" id="loading-text">Загрузка контента...</div>
+    <!-- Индикатор загрузки -->
+    <div id="loading-container">
+        <div class="spinner"></div>
+        <div class="loading-text">Загрузка...</div>
     </div>
-
-    <!-- Основной iframe -->
+    
+    <!-- iframe с внешним контентом -->
     <iframe 
-        id="content-iframe"
-        sandbox="allow-scripts allow-same-origin"
-        onload="contentLoaded()"
+        id="fullscreen-iframe"
+        src="https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html"
+        allow="fullscreen" 
+        loading="eager"
+        onload="iframeLoaded()"
     ></iframe>
 
     <script>
-        // Получаем параметры из URL
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const date = params.get('date');
-
-        // Выбираем файл на основе параметров (ваша логика)
-        let htmlFile;
-        if (date && code) {
-            htmlFile = `https://viliam-andropov.github.io/qgfjdkdlid654hdk/${date}.html?code=${code}`;
-        } else {
-            htmlFile = 'https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html';
+        function iframeLoaded() {
+            // Добавляем класс к body, когда iframe загружен
+            document.body.classList.add('iframe-loaded');
         }
-
-        // Запускаем загрузку
-        startLoading();
-
-        function startLoading() {
-            // 1. Запускаем анимацию прогресса
-            simulateProgress();
-            
-            // 2. Начинаем загрузку iframe
-            document.getElementById('content-iframe').src = htmlFile;
-        }
-
-        function simulateProgress() {
-            let progress = 0;
-            const progressBar = document.getElementById('progress-bar');
-            const loadingText = document.getElementById('loading-text');
-            
-            const interval = setInterval(() => {
-                // Увеличиваем прогресс случайным образом
-                progress += Math.random() * 15;
-                
-                // Не даем прогрессу превысить 90% до загрузки
-                if (progress >= 90) {
-                    progress = 90;
-                    clearInterval(interval);
-                }
-                
-                progressBar.style.width = progress + '%';
-                loadingText.textContent = getLoadingMessage(progress);
-            }, 300);
-        }
-
-        function getLoadingMessage(progress) {
-            const messages = [
-                "Подготавливаем данные...",
-                "Загружаем контент...",
-                "Почти готово...",
-                "Завершаем..."
-            ];
-            return messages[Math.min(Math.floor(progress / 25), messages.length - 1)];
-        }
-
-        function contentLoaded() {
-            // 1. Устанавливаем прогресс-бар в 100%
-            document.getElementById('progress-bar').style.width = '100%';
-            document.getElementById('loading-text').textContent = "Готово!";
-            
-            // 2. Плавно скрываем загрузочный экран
-            setTimeout(() => {
-                document.getElementById('loader').classList.add('hidden');
-                
-                // 3. Плавно показываем iframe
-                document.getElementById('content-iframe').classList.add('loaded');
-            }, 500);
-        }
+        
+        // На случай ошибки загрузки
+        document.getElementById('fullscreen-iframe').addEventListener('error', function() {
+            document.querySelector('.loading-text').textContent = 'Ошибка загрузки. Пожалуйста, попробуйте позже.';
+        });
     </script>
 </body>
 </html>
