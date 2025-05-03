@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iframe с загрузкой</title>
+    <title>Iframe с анимированным прогресс-баром</title>
     <style>
-        /* Сброс отступов и полос прокрутки */
+        /* Сброс стилей и полноэкранные размеры */
         body, html {
             margin: 0;
             padding: 0;
@@ -14,27 +14,20 @@
             font-family: Arial, sans-serif;
         }
 
-        /* Контейнер для прелоадера и iframe */
-        #container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Стили для прелоадера */
+        /* Стили для загрузочного экрана */
         #loader {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: #f5f5f5;
+            background: white;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 100;
-            transition: opacity 0.5s;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
         }
 
         #loader.hidden {
@@ -42,30 +35,44 @@
             pointer-events: none;
         }
 
-        #loader img {
+        .loading-image {
             width: 100px;
             height: 100px;
             margin-bottom: 20px;
+            animation: pulse 1.5s infinite;
         }
 
-        /* Прогресс-бар */
-        #progress-container {
-            width: 80%;
-            max-width: 400px;
-            height: 10px;
-            background: #e0e0e0;
-            border-radius: 5px;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Стили для прогресс-бара */
+        .progress-container {
+            width: 50%;
+            max-width: 300px;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
             overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
         }
 
-        #progress-bar {
+        .progress-bar {
             height: 100%;
             width: 0%;
-            background: #4CAF50;
-            transition: width 0.3s;
+            background: linear-gradient(to right, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
         }
 
-        /* Стили для iframe */
+        .loading-text {
+            margin-top: 15px;
+            color: #555;
+            font-size: 1.2em;
+        }
+
+        /* Стили для полноэкранного iframe */
         #content-iframe {
             position: absolute;
             top: 0;
@@ -74,7 +81,7 @@
             height: 100%;
             border: none;
             opacity: 0;
-            transition: opacity 0.5s;
+            transition: opacity 0.5s ease;
         }
 
         #content-iframe.loaded {
@@ -83,52 +90,90 @@
     </style>
 </head>
 <body>
-    <div id="container">
-        <!-- Прелоадер с картинкой и прогресс-баром -->
-        <div id="loader">
-            <img src="https://via.placeholder.com/100x100?text=Loading" alt="Loading...">
-            <h2>Загрузка контента...</h2>
-            <div id="progress-container">
-                <div id="progress-bar"></div>
-            </div>
+    <!-- Загрузочный экран -->
+    <div id="loader">
+        <img class="loading-image" src="https://cdn.pixabay.com/photo/2016/08/25/07/30/orange-1618917_640.png" alt="Loading">
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
         </div>
-
-        <!-- Основной iframe -->
-        <iframe 
-            id="content-iframe"
-            src="https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html"
-            allow="fullscreen"
-            onload="iframeLoaded()"
-        ></iframe>
+        <div class="loading-text" id="loading-text">Загрузка контента...</div>
     </div>
 
+    <!-- Основной iframe -->
+    <iframe 
+        id="content-iframe"
+        sandbox="allow-scripts allow-same-origin"
+        onload="contentLoaded()"
+    ></iframe>
+
     <script>
-        // Эмулируем прогресс загрузки (можно заменить на реальный)
+        // Получаем параметры из URL
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const date = params.get('date');
+
+        // Выбираем файл на основе параметров (ваша логика)
+        let htmlFile;
+        if (date && code) {
+            htmlFile = `https://viliam-andropov.github.io/qgfjdkdlid654hdk/${date}.html?code=${code}`;
+        } else {
+            htmlFile = 'https://viliam-andropov.github.io/qgfjdkdlid654hdk/2025-05-03.html';
+        }
+
+        // Запускаем загрузку
+        startLoading();
+
+        function startLoading() {
+            // 1. Запускаем анимацию прогресса
+            simulateProgress();
+            
+            // 2. Начинаем загрузку iframe
+            document.getElementById('content-iframe').src = htmlFile;
+        }
+
         function simulateProgress() {
             let progress = 0;
             const progressBar = document.getElementById('progress-bar');
+            const loadingText = document.getElementById('loading-text');
+            
             const interval = setInterval(() => {
-                progress += Math.random() * 10;
-                if (progress >= 100) {
-                    progress = 100;
+                // Увеличиваем прогресс случайным образом
+                progress += Math.random() * 15;
+                
+                // Не даем прогрессу превысить 90% до загрузки
+                if (progress >= 90) {
+                    progress = 90;
                     clearInterval(interval);
                 }
+                
                 progressBar.style.width = progress + '%';
+                loadingText.textContent = getLoadingMessage(progress);
             }, 300);
         }
 
-        // Когда iframe загрузился
-        function iframeLoaded() {
-            const loader = document.getElementById('loader');
-            const iframe = document.getElementById('content-iframe');
-            
-            // Плавно скрываем прелоадер и показываем iframe
-            loader.classList.add('hidden');
-            iframe.classList.add('loaded');
+        function getLoadingMessage(progress) {
+            const messages = [
+                "Подготавливаем данные...",
+                "Загружаем контент...",
+                "Почти готово...",
+                "Завершаем..."
+            ];
+            return messages[Math.min(Math.floor(progress / 25), messages.length - 1)];
         }
 
-        // Запускаем анимацию прогресса при загрузке страницы
-        window.onload = simulateProgress;
+        function contentLoaded() {
+            // 1. Устанавливаем прогресс-бар в 100%
+            document.getElementById('progress-bar').style.width = '100%';
+            document.getElementById('loading-text').textContent = "Готово!";
+            
+            // 2. Плавно скрываем загрузочный экран
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+                
+                // 3. Плавно показываем iframe
+                document.getElementById('content-iframe').classList.add('loaded');
+            }, 500);
+        }
     </script>
 </body>
 </html>
