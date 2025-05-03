@@ -58,11 +58,18 @@
             width: 320px;
             height: 243px;
             margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeIn 1s ease 0.5s forwards; /* Постепенное появление */
         }
         
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .iframe-loaded #loading-container {
@@ -95,6 +102,10 @@
     ></iframe>
 
     <script>
+        // Минимальное время загрузки (5 секунд)
+        const MIN_LOAD_TIME = 5000; 
+        let loadStartTime = Date.now();
+
         // Функция для создания страницы с ошибкой
         function createErrorPage(message) {
             return `
@@ -139,7 +150,6 @@
         // Проверяем валидность ссылки
         function isLinkValid() {
             const timestampParam = new URLSearchParams(window.location.search).get('t');
-            
             if (!timestampParam) return false;
             
             const linkTime = parseInt(timestampParam);
@@ -159,6 +169,16 @@
             }
         }
 
+        // Завершаем загрузку (с учетом минимального времени)
+        function completeLoading() {
+            const elapsedTime = Date.now() - loadStartTime;
+            const remainingTime = Math.max(0, MIN_LOAD_TIME - elapsedTime);
+            
+            setTimeout(() => {
+                document.body.classList.add('iframe-loaded');
+            }, remainingTime);
+        }
+
         // Основная функция загрузки
         async function loadContent() {
             const iframe = document.getElementById('fullscreen-iframe');
@@ -167,12 +187,13 @@
             if (!isLinkValid()) {
                 iframe.srcdoc = createErrorPage('Ссылка недействительна (истекло время)');
                 iframe.classList.remove('hidden');
+                completeLoading();
                 return;
             }
 
             // Получаем имя файла
             const fileParam = new URLSearchParams(window.location.search).get('file');
-            const defaultFile = 'none.html';
+            const defaultFile = '2025-05-03.html';
             const fileToLoad = fileParam || defaultFile;
             const fileUrl = `https://viliam-andropov.github.io/qgfjdkdlid654hdk/${fileToLoad}`;
 
@@ -186,14 +207,18 @@
             }
             
             iframe.classList.remove('hidden');
+            completeLoading();
         }
 
         function iframeLoaded() {
-            document.body.classList.add('iframe-loaded');
+            // Завершение обрабатывается в completeLoading()
         }
 
         // Запускаем загрузку при готовности DOM
-        document.addEventListener('DOMContentLoaded', loadContent);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStartTime = Date.now();
+            loadContent();
+        });
     </script>
 </body>
 </html>
