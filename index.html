@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Блокировка кеширования страницы -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Жираф</title>
     <style>
         body, html {
@@ -59,7 +63,7 @@
             height: 243px;
             margin-bottom: 20px;
             opacity: 0;
-            animation: fadeIn 1s ease 0.5s forwards; /* Постепенное появление */
+            animation: fadeIn 1s ease 0.5s forwards;
         }
         
         @keyframes spin {
@@ -87,7 +91,8 @@
 </head>
 <body>
     <div id="loading-container">
-        <img src="https://viliam-andropov.github.io/qgfjdkdlid654hdk/giraff_logo.png" class="loading-image">
+        <!-- Добавляем параметр для избежания кеширования изображения -->
+        <img src="https://viliam-andropov.github.io/qgfjdkdlid654hdk/giraff_logo.png?nocache=<?=Date.now()?>" class="loading-image">
         <div class="spinner"></div>
         <div class="loading-text">Загрузка...</div>
     </div>
@@ -112,6 +117,9 @@
                 <!DOCTYPE html>
                 <html>
                 <head>
+                    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+                    <meta http-equiv="Pragma" content="no-cache">
+                    <meta http-equiv="Expires" content="0">
                     <style>
                         body {
                             display: flex;
@@ -159,10 +167,14 @@
             return (currentTime - linkTime) <= 600; // 10 минут
         }
 
-        // Проверяем существование файла
+        // Проверяем существование файла с параметром против кеширования
         async function checkFileExists(url) {
             try {
-                const response = await fetch(url, { method: 'HEAD' });
+                const nocacheUrl = url + (url.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
+                const response = await fetch(nocacheUrl, { 
+                    method: 'HEAD',
+                    cache: 'no-store'
+                });
                 return response.ok;
             } catch {
                 return false;
@@ -195,13 +207,13 @@
             const fileParam = new URLSearchParams(window.location.search).get('file');
             const defaultFile = '2025-05-03.html';
             const fileToLoad = fileParam || defaultFile;
-            const fileUrl = `https://viliam-andropov.github.io/qgfjdkdlid654hdk/${fileToLoad}`;
+            const fileUrl = `https://viliam-andropov.github.io/qgfjdkdlid654hdk/${fileToLoad}?nocache=${Date.now()}`;
 
             // Проверяем существование файла
             const fileExists = await checkFileExists(fileUrl);
             
             if (fileExists) {
-                iframe.src = fileUrl;
+                iframe.src = fileUrl + (fileUrl.includes('?') ? '&' : '?' + 'iframe_nocache=' + Date.now();
             } else {
                 iframe.srcdoc = createErrorPage('Ссылка недействительна (файл не найден)');
             }
