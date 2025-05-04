@@ -59,7 +59,7 @@
             height: 243px;
             margin-bottom: 20px;
             opacity: 0;
-            animation: fadeIn 1s ease 0.5s forwards; /* Постепенное появление */
+            animation: fadeIn 1s ease 0.5s forwards;
         }
         
         @keyframes spin {
@@ -102,10 +102,13 @@
     ></iframe>
 
     <script>
-        // Минимальное время загрузки (5 секунд)
+        // Минимальное время загрузки (2 секунды)
         const MIN_LOAD_TIME = 2000; 
         let loadStartTime = Date.now();
 
+        // Секретный ключ для расшифровки (должен совпадать с ключом на сервере)
+        const SECRET_KEY = "qgfjdkdlid654hdk";
+        
         // Функция для создания страницы с ошибкой
         function createErrorPage(message) {
             return `
@@ -147,16 +150,43 @@
             `;
         }
 
-        // Проверяем валидность ссылки
-        function isLinkValid() {
-            const timestampParam = new URLSearchParams(window.location.search).get('t');
-            if (!timestampParam) return false;
-            
-            const linkTime = parseInt(timestampParam);
-            if (isNaN(linkTime)) return false;
-            
-            const currentTime = Math.floor(Date.now() / 1000);
-            return (currentTime - linkTime) <= 600; // 10 минут
+        // Простая функция дешифровки (используем XOR для примера)
+        function decryptData(encrypted, key) {
+            let result = '';
+            for (let i = 0; i < encrypted.length; i++) {
+                const keyChar = key.charCodeAt(i % key.length);
+                const encryptedChar = encrypted.charCodeAt(i);
+                result += String.fromCharCode(encryptedChar ^ keyChar);
+            }
+            return result;
+        }
+
+        // Проверяем валидность зашифрованного параметра
+        function isTokenValid(encryptedToken) {
+            try {
+                const decrypted = decryptData(decodeURIComponent(encryptedToken), SECRET_KEY);
+                const parts = decrypted.split('|');
+                
+                if (parts.length !== 2) return false;
+                
+                const timestamp = parseInt(parts[0]);
+                const file = parts[1];
+                
+                if (isNaN(timestamp)) return false;
+                
+                // Проверяем, что токен не старше 10 минут
+                const currentTime = Math.floor(Date.now() / 1000);
+                return (currentTime - timestamp) <= 600 && file.length > 0;
+                
+            } catch {
+                return false;
+            }
+        }
+
+        // Получаем имя файла из токена
+        function getFileFromToken(encryptedToken) {
+            const decrypted = decryptData(decodeURIComponent(encryptedToken), SECRET_KEY);
+            return decrypted.split('|')[1];
         }
 
         // Проверяем существование файла
@@ -183,18 +213,20 @@
         async function loadContent() {
             const iframe = document.getElementById('fullscreen-iframe');
             
-            // Если ссылка невалидна
-            if (!isLinkValid()) {
-                iframe.srcdoc = createErrorPage('Ссылка недействительна (истекло время)');
+            // Получаем зашифрованный токен из URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const encryptedToken = urlParams.get('token');
+            
+            // Если токена нет или он невалиден
+            if (!encryptedToken || !isTokenValid(encryptedToken)) {
+                iframe.srcdoc = createErrorPage('Ссылка недействительна или истекло время');
                 iframe.classList.remove('hidden');
                 completeLoading();
                 return;
             }
 
-            // Получаем имя файла
-            const fileParam = new URLSearchParams(window.location.search).get('file');
-            const defaultFile = '2025-05-03.html';
-            const fileToLoad = fileParam || defaultFile;
+            // Получаем имя файла из токена
+            const fileToLoad = getFileFromToken(encryptedToken);
             const fileUrl = `https://giraffcontest.github.io/qgfjdkdlid654hdk/${fileToLoad}`;
 
             // Проверяем существование файла
@@ -203,7 +235,7 @@
             if (fileExists) {
                 iframe.src = fileUrl;
             } else {
-                iframe.srcdoc = createErrorPage('Ссылка недействительна (файл не найден)');
+                iframe.srcdoc = createErrorPage('Файл не найден');
             }
             
             iframe.classList.remove('hidden');
