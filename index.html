@@ -227,10 +227,10 @@
 
             // Получаем имя файла из токена
             const fileToLoad = getFileFromToken(encryptedToken);
-            const fileUrl = `https://giraffcontest.github.io/qgfjdkdlid654hdk/${fileToLoad}`;
+            const fileUrl = `https://giraffcontest.github.io/qgfjdkdlid654hdk/${fileToLoad}?t=1`;
 
             // Проверяем существование файла
-            const fileExists = await checkFileExists(fileUrl);
+            const fileExists = await checkFileExists(fileUrl.split('?')[0]);
             
             if (fileExists) {
                 iframe.src = fileUrl;
