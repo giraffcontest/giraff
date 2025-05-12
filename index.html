@@ -151,13 +151,15 @@
         }
 
         // Простая функция дешифровки (используем XOR для примера)
-        function decryptData(encrypted, key) {
+        function decryptData(encryptedBase64, key) {
+            // Декодируем из base64
+            const encryptedBytes = atob(encryptedBase64.replace(/-/g, '+').replace(/_/g, '/'));
             let result = '';
-            for (let i = 0; i < encrypted.length; i++) {
+            for (let i = 0; i < encryptedBytes.length; i++) {
                 const keyChar = key.charCodeAt(i % key.length);
-                const encryptedChar = encrypted.charCodeAt(i);
+                const encryptedChar = encryptedBytes.charCodeAt(i);
                 result += String.fromCharCode(encryptedChar ^ keyChar);
-            }
+                }
             return result;
         }
 
