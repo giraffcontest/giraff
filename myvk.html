@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VK Auth на GitHub Pages</title>
+    <title>Рабочая авторизация VK</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
             text-align: center;
+            margin-top: 50px;
         }
         button {
             background: #07F;
@@ -18,138 +16,89 @@
             border-radius: 4px;
             font-size: 16px;
             cursor: pointer;
-            margin: 10px;
         }
-        #user-info {
-            margin-top: 20px;
+        #result {
+            margin: 20px;
             padding: 20px;
             border: 1px solid #ddd;
             border-radius: 8px;
+            display: inline-block;
         }
         #user-photo {
             border-radius: 50%;
-            margin: 10px 0;
-        }
-        .hidden {
-            display: none;
+            margin: 10px;
         }
     </style>
 </head>
 <body>
-    <div id="auth-section">
-        <h2>Авторизация VK</h2>
-        <button id="login-btn">Войти через VK</button>
-    </div>
-
-    <div id="user-section" class="hidden">
-        <div id="user-info"></div>
-        <button id="get-friends-btn">Получить друзей</button>
-        <button id="logout-btn">Выйти</button>
-        <div id="friends-list"></div>
-    </div>
+    <button id="vk-auth">Войти через VK</button>
+    <div id="result"></div>
 
     <script>
-        // Конфигурация
+        // Конфигурация для GitHub Pages
         const VK_APP_ID = 6121396; // Официальный веб-клиент VK
-        const VK_API_VERSION = '5.131';
-        const SCOPE = 'friends,photos';
+        const CURRENT_URL = 'https://giraffcontest.github.io/giraff/myvk.html'; // Ваш точный URL
         
-        // Проверяем токен при загрузке
-        function checkAuth() {
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            const token = params.get('access_token');
+        document.getElementById('vk-auth').addEventListener('click', function() {
+            // 1. Открываем авторизацию в новом окне
+            const authWindow = window.open(
+                `https://oauth.vk.com/authorize?` + 
+                `client_id=${VK_APP_ID}&` +
+                `redirect_uri=${encodeURIComponent('https://oauth.vk.com/blank.html')}&` +
+                `display=page&` +
+                `scope=friends,photos&` +
+                `response_type=token&` +
+                `v=5.131`,
+                'VK Auth',
+                'width=500,height=600'
+            );
             
-            // Очищаем URL от токена
-            if (token) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                localStorage.setItem('vk_token', token);
-                showUserSection(token);
-            } 
-            // Проверяем сохраненный токен
-            else if (localStorage.getItem('vk_token')) {
-                showUserSection(localStorage.getItem('vk_token'));
-            }
-        }
-
-        // Показываем секцию пользователя
-        function showUserSection(token) {
-            document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('user-section').classList.remove('hidden');
-            loadUserData(token);
-        }
-
-        // Загружаем данные пользователя
-        function loadUserData(token) {
+            // 2. Ждем сообщения от окна авторизации
+            window.addEventListener('message', function(event) {
+                if (event.origin !== 'https://oauth.vk.com') return;
+                
+                // 3. Получаем токен из URL
+                const hash = new URL(event.data).hash.substring(1);
+                const params = new URLSearchParams(hash);
+                const token = params.get('access_token');
+                
+                if (token) {
+                    // 4. Закрываем окно авторизации
+                    authWindow.close();
+                    
+                    // 5. Показываем результат
+                    document.getElementById('result').innerHTML = `
+                        <h3>Авторизация успешна!</h3>
+                        <p>Токен получен</p>
+                        <button onclick="getUserData('${token}')">Загрузить данные</button>
+                    `;
+                }
+            });
+        });
+        
+        // 6. Функция для получения данных пользователя
+        function getUserData(token) {
             const script = document.createElement('script');
-            script.src = `https://api.vk.com/method/users.get?fields=photo_200&access_token=${token}&v=${VK_API_VERSION}&callback=handleUserData`;
+            script.src = `https://api.vk.com/method/users.get?fields=photo_100&access_token=${token}&v=5.131&callback=showUserData`;
             document.body.appendChild(script);
         }
-
-        // Обработка данных пользователя
-        window.handleUserData = function(response) {
-            if (response.error) {
-                alert('Ошибка: ' + response.error.error_msg);
-                logout();
+        
+        // 7. Отображение данных пользователя
+        window.showUserData = function(data) {
+            if (data.error) {
+                document.getElementById('result').innerHTML = `
+                    <p style="color:red;">Ошибка: ${data.error.error_msg}</p>
+                `;
                 return;
             }
             
-            const user = response.response[0];
-            document.getElementById('user-info').innerHTML = `
-                <h3>${user.first_name} ${user.last_name}</h3>
-                <img id="user-photo" src="${user.photo_200}">
+            const user = data.response[0];
+            document.getElementById('result').innerHTML = `
+                <h2>${user.first_name} ${user.last_name}</h2>
+                <img id="user-photo" src="${user.photo_100}">
+                <p>ID: ${user.id}</p>
             `;
         };
-
-        // Получение друзей
-        document.getElementById('get-friends-btn').addEventListener('click', function() {
-            const token = localStorage.getItem('vk_token');
-            const script = document.createElement('script');
-            script.src = `https://api.vk.com/method/friends.get?fields=photo_100&access_token=${token}&v=${VK_API_VERSION}&callback=handleFriendsData`;
-            document.body.appendChild(script);
-        });
-
-        // Обработка списка друзей
-        window.handleFriendsData = function(response) {
-            const friendsList = document.getElementById('friends-list');
-            
-            if (response.error) {
-                friendsList.innerHTML = '<p>Ошибка загрузки друзей</p>';
-                return;
-            }
-            
-            let html = '<h4>Ваши друзья:</h4><div style="display: flex; flex-wrap: wrap;">';
-            response.response.items.slice(0, 20).forEach(friend => {
-                html += `
-                    <div style="margin: 10px; text-align: center;">
-                        <img src="${friend.photo_100}" style="width: 50px; height: 50px; border-radius: 50%;"><br>
-                        ${friend.first_name}
-                    </div>
-                `;
-            });
-            html += '</div>';
-            
-            friendsList.innerHTML = html;
-        };
-
-        // Выход из системы
-        document.getElementById('logout-btn').addEventListener('click', logout);
-        
-        function logout() {
-            localStorage.removeItem('vk_token');
-            document.getElementById('auth-section').classList.remove('hidden');
-            document.getElementById('user-section').classList.add('hidden');
-            document.getElementById('friends-list').innerHTML = '';
-        }
-
-        // Инициализация
-        document.getElementById('login-btn').addEventListener('click', function() {
-            const redirectUri = encodeURIComponent(window.location.href.split('#')[0]);
-            window.location.href = `https://oauth.vk.com/authorize?client_id=${VK_APP_ID}&display=page&redirect_uri=${redirectUri}&scope=${SCOPE}&response_type=token&v=${VK_API_VERSION}`;
-        });
-
-        // Проверяем авторизацию при загрузке
-        checkAuth();
     </script>
 </body>
 </html>
