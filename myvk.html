@@ -1,59 +1,26 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VK Auth</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+    <script>
+        function auth() {
+            const VK_APP_ID = 6121396;
+            const VK_REDIRECT_URI = encodeURIComponent('https://oauth.vk.com/blank.html');
+            window.open(
+                `https://oauth.vk.com/authorize?client_id=${VK_APP_ID}&display=page&redirect_uri=${VK_REDIRECT_URI}&scope=friends&response_type=token&v=5.131`,
+                'VK Auth',
+                'width=500,height=600'
+            );
+            
+            window.addEventListener('message', (e) => {
+                if (e.origin !== 'https://oauth.vk.com') return;
+                document.getElementById('result').innerText = e.data;
+            });
         }
-        button {
-            background: #07F;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
+    </script>
 </head>
 <body>
-    <button id="login-btn">Войти через VK</button>
+    <button onclick="auth()">Войти через VK</button>
     <div id="result"></div>
-
-    <script>
-        // Официальный клиент VK для веба
-        const VK_APP_ID = 6121396;
-        // Ваш URL ДОЛЖЕН совпадать с тем, где размещен этот файл
-        const VK_REDIRECT_URI = 'https://giraffcontest.github.io/giraff/myvk.html'; 
-        const VK_API_VERSION = '5.131';
-        
-        document.getElementById('login-btn').addEventListener('click', () => {
-            // Важно: scope должен включать только базовые права
-            const scope = 'friends,photos';
-            
-            const authUrl = `https://oauth.vk.com/authorize?client_id=${VK_APP_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&scope=${scope}&response_type=token&v=${VK_API_VERSION}`;
-            
-            window.location.href = authUrl;
-        });
-
-        // Проверяем ответ после редиректа
-        window.addEventListener('load', () => {
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            const token = params.get('access_token');
-            
-            if (token) {
-                document.getElementById('result').innerHTML = '<p>Токен получен!</p>';
-                // Здесь можно использовать токен для API запросов
-            } else if (params.get('error')) {
-                document.getElementById('result').innerHTML = `<p>Ошибка: ${params.get('error_description')}</p>`;
-            }
-        });
-    </script>
 </body>
 </html>
