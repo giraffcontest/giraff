@@ -1,98 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VK Auth без popup</title>
+    <title>Минимальная VK Auth</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
         button { background: #07F; color: white; border: none; padding: 12px 20px; 
                 border-radius: 4px; font-size: 16px; cursor: pointer; }
-        #user-data { margin: 20px auto; max-width: 300px; padding: 20px; 
-                   border: 1px solid #ddd; border-radius: 8px; }
-        #user-photo { border-radius: 50%; margin: 10px; }
     </style>
 </head>
 <body>
-    <button id="vk-auth">Войти через VK</button>
-    <div id="user-data"></div>
+    <button onclick="auth()">Войти через VK</button>
+    <div id="result"></div>
 
     <script>
-        // 1. Конфигурация
-        const VK_APP_ID = 6121396; // Официальный веб-клиент
-        const SCOPE = 'friends';
-        
-        // 2. Инициализация авторизации
-        document.getElementById('vk-auth').addEventListener('click', () => {
-            // Ваш точный URL на GitHub Pages
-            const REDIRECT_URI = encodeURIComponent(
-                'https://giraffcontest.github.io/giraff/myvk.html'
+        function auth() {
+            // 1. Открываем авторизацию в новом окне
+            const win = window.open(
+                'https://oauth.vk.com/authorize?client_id=3697615&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends&response_type=token&v=5.131', 
+                'VK Auth',
+                'width=500,height=600'
             );
             
-            // Полноценный редирект (без popup)
-            window.location.href = 
-                `https://oauth.vk.com/authorize?client_id=${VK_APP_ID}` +
-                `&display=page&redirect_uri=${REDIRECT_URI}` +
-                `&scope=${SCOPE}&response_type=token&v=5.131`;
-        });
-
-        // 3. Проверка токена при загрузке
-        window.addEventListener('DOMContentLoaded', () => {
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            const token = params.get('access_token');
-            
-            if (token) {
-                // Очистка URL от токена
-                window.history.replaceState({}, '', window.location.pathname);
-                showUserData(token);
-            }
-        });
-
-        // 4. Получение данных пользователя
-        function showUserData(token) {
-            const script = document.createElement('script');
-            script.src = `https://api.vk.com/method/users.get?fields=photo_100&access_token=${token}&v=5.131&callback=handleUserData`;
-            document.body.appendChild(script);
+            // 2. Проверяем результат каждые 100мс
+            const timer = setInterval(() => {
+                try {
+                    if (win.location.href.includes('blank.html#')) {
+                        clearInterval(timer);
+                        const token = win.location.hash.split('&')[0].split('=')[1];
+                        win.close();
+                        document.getElementById('result').innerHTML = `
+                            <p>Токен получен!</p>
+                            <p>${token.substring(0, 15)}...</p>
+                        `;
+                    }
+                } catch(e) {}
+                
+                if (win.closed) clearInterval(timer);
+            }, 100);
         }
-
-        // 5. Обработка данных
-        window.handleUserData = function(response) {
-            const userData = document.getElementById('user-data');
-            
-            if (response.error) {
-                userData.innerHTML = `<p style="color:red;">Ошибка: ${response.error.error_msg}</p>`;
-                return;
-            }
-            
-            const user = response.response[0];
-            userData.innerHTML = `
-                <h3>${user.first_name} ${user.last_name}</h3>
-                <img id="user-photo" src="${user.photo_100}">
-                <p>ID: ${user.id}</p>
-                <button onclick="getFriends('${token}')">Получить друзей</button>
-            `;
-        };
-
-        // 6. Получение друзей (дополнительно)
-        window.getFriends = function(token) {
-            const script = document.createElement('script');
-            script.src = `https://api.vk.com/method/friends.get?fields=photo_50&access_token=${token}&v=5.131&callback=handleFriends`;
-            document.body.appendChild(script);
-        };
-
-        window.handleFriends = function(response) {
-            if (response.error) return;
-            
-            let friendsHtml = '<h4>Друзья:</h4><div style="display:flex;flex-wrap:wrap;">';
-            response.response.items.slice(0, 20).forEach(friend => {
-                friendsHtml += `
-                    <div style="margin:5px;text-align:center;">
-                        <img src="${friend.photo_50}" style="border-radius:50%;width:50px;height:50px;">
-                        <p>${friend.first_name}</p>
-                    </div>
-                `;
-            });
-            document.getElementById('user-data').innerHTML += friendsHtml + '</div>';
-        };
     </script>
 </body>
 </html>
