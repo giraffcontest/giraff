@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK App на GitHub Pages</title>
+    <style>
+        :root {
+            --primary-color: #4a76a8;
+            --secondary-color: #5b88bd;
+            --text-color: #2a2a2a;
+            --light-color: #f5f5f5;
+            --error-color: #e53935;
+            --success-color: #43a047;
+        }
+        
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--light-color);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+        }
+        
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        button.secondary {
+            background-color: #f1f1f1;
+            color: var(--text-color);
+        }
+        
+        button.secondary:hover {
+            background-color: #e1e1e1;
+        }
+        
+        #user-info {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        
+        #user-info img {
+            border-radius: 50%;
+            margin: 15px 0;
+            border: 3px solid var(--primary-color);
+        }
+        
+        .error {
+            color: var(--error-color);
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+        }
+        
+        .success {
+            color: var(--success-color);
+        }
+        
+        #friends-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .friend-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .friend-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+        
+        .friend-info {
+            flex-grow: 1;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            button {
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Мое VK приложение</h1>
+            <p>Тестовое приложение для работы с VK API через GitHub Pages</p>
+        </header>
+        
+        <div id="auth-section">
+            <button id="login-btn">Войти через VK</button>
+        </div>
+        
+        <div id="user-info" style="display: none;">
+            <div id="profile-data"></div>
+            <button id="get-friends-btn">Получить друзей</button>
+            <button id="logout-btn" class="secondary">Выйти</button>
+            <div id="friends-list"></div>
+        </div>
+        
+        <div id="status-message"></div>
+    </div>
+
+    <script>
+        // Конфигурация приложения
+        const APP_ID = '2685278'; // Замените на ваш ID приложения VK
+        const REDIRECT_URI = window.location.href.split('#')[0]; // Текущий URL без хэша
+        const API_VERSION = '5.131';
+        
+        // DOM элементы
+        const authSection = document.getElementById('auth-section');
+        const userInfoSection = document.getElementById('user-info');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const getFriendsBtn = document.getElementById('get-friends-btn');
+        const profileData = document.getElementById('profile-data');
+        const friendsList = document.getElementById('friends-list');
+        const statusMessage = document.getElementById('status-message');
+        
+        // Проверяем параметры URL после возврата с VK
+        function checkAuth() {
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get('access_token');
+            const error = params.get('error');
+            
+            // Очищаем URL от параметров
+            if (window.location.hash) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            if (error) {
+                showError(`Ошибка авторизации: ${error}`);
+            } else if (accessToken) {
+                // Сохраняем токен и загружаем данные пользователя
+                localStorage.setItem('vk_token', accessToken);
+                loadUserData(accessToken);
+            } else {
+                // Проверяем сохраненный токен
+                const savedToken = localStorage.getItem('vk_token');
+                if (savedToken) {
+                    loadUserData(savedToken);
+                }
+            }
+        }
+        
+        // Загрузка данных пользователя
+        function loadUserData(token) {
+            showLoading(profileData);
+            authSection.style.display = 'none';
+            userInfoSection.style.display = 'block';
+            
+            callVKApi('users.get', {
+                fields: 'photo_200,status,counters',
+                access_token: token,
+                v: API_VERSION
+            }, function(response) {
+                if (response.error) {
+                    showError(`Ошибка API: ${response.error.error_msg}`);
+                    logout();
+                    return;
+                }
+                
+                const user = response.response[0];
+                displayUserProfile(user);
+            });
+        }
+        
+        // Отображение профиля пользователя
+        function displayUserProfile(user) {
+            profileData.innerHTML = `
+                <h2>${user.first_name} ${user.last_name}</h2>
+                <img src="${user.photo_200}" alt="Фото профиля">
+                ${user.status ? `<p>Статус: ${user.status}</p>` : ''}
+                ${user.counters ? `<p>Друзей: ${user.counters.friends || 0}</p>` : ''}
+            `;
+        }
+        
+        // Получение списка друзей
+        function getFriends() {
+            showLoading(friendsList);
+            const token = localStorage.getItem('vk_token');
+            
+            callVKApi('friends.get', {
+                fields: 'photo_100,domain,city',
+                access_token: token,
+                v: API_VERSION
+            }, function(response) {
+                if (response.error) {
+                    showError(`Ошибка при получении друзей: ${response.error.error_msg}`);
+                    return;
+                }
+                
+                displayFriends(response.response.items);
+            });
+        }
+        
+        // Отображение списка друзей
+        function displayFriends(friends) {
+            if (!friends || friends.length === 0) {
+                friendsList.innerHTML = '<p>Нет друзей для отображения</p>';
+                return;
+            }
+            
+            let html = '<h3>Ваши друзья:</h3>';
+            friends.slice(0, 20).forEach(friend => {
+                html += `
+                    <div class="friend-item">
+                        <img src="${friend.photo_100}" alt="${friend.first_name}">
+                        <div class="friend-info">
+                            <a href="https://vk.com/${friend.domain}" target="_blank">
+                                ${friend.first_name} ${friend.last_name}
+                            </a>
+                            ${friend.city ? `<p>${friend.city.title}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            friendsList.innerHTML = html;
+        }
+        
+        // Выход из аккаунта
+        function logout() {
+            localStorage.removeItem('vk_token');
+            authSection.style.display = 'block';
+            userInfoSection.style.display = 'none';
+            friendsList.innerHTML = '';
+            showStatus('Вы успешно вышли из аккаунта', 'success');
+        }
+        
+        // Вызов VK API через JSONP
+        function callVKApi(method, params, callback) {
+            // Создаем имя для callback-функции
+            const callbackName = 'vkCallback_' + Math.random().toString(36).substring(7);
+            
+            // Добавляем callback в глобальную область видимости
+            window[callbackName] = function(response) {
+                delete window[callbackName];
+                callback(response);
+            };
+            
+            // Собираем URL для запроса
+            let url = `https://api.vk.com/method/${method}?`;
+            for (const key in params) {
+                url += `${key}=${encodeURIComponent(params[key])}&`;
+            }
+            url += `callback=${callbackName}`;
+            
+            // Создаем и добавляем script-тег
+            const script = document.createElement('script');
+            script.src = url;
+            document.body.appendChild(script);
+            
+            // Удаляем script после выполнения
+            script.onload = function() {
+                document.body.removeChild(script);
+            };
+        }
+        
+        // Показать сообщение о загрузке
+        function showLoading(element) {
+            element.innerHTML = '<div class="loading"></div>';
+        }
+        
+        // Показать сообщение об ошибке
+        function showError(message) {
+            statusMessage.innerHTML = `<div class="error">${message}</div>`;
+            setTimeout(() => statusMessage.innerHTML = '', 5000);
+        }
+        
+        // Показать статусное сообщение
+        function showStatus(message, type = '') {
+            statusMessage.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => statusMessage.innerHTML = '', 5000);
+        }
+        
+        // Инициализация приложения
+        function init() {
+            // Обработчики событий
+            loginBtn.addEventListener('click', () => {
+                const scope = 'friends,photos,status'; // Запрашиваемые права
+                window.location.href = `https://oauth.vk.com/authorize?client_id=${APP_ID}&display=page&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scope}&response_type=token&v=${API_VERSION}`;
+            });
+            
+            logoutBtn.addEventListener('click', logout);
+            getFriendsBtn.addEventListener('click', getFriends);
+            
+            // Проверяем авторизацию при загрузке
+            checkAuth();
+        }
+        
+        // Запускаем приложение после загрузки DOM
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+
